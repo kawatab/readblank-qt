@@ -1,0 +1,33 @@
+# Build directories
+build/
+cmake-build-*/
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# Qt generated files
+.qt/
+*.qmlc
+*.jsc
+qmlcache_loader.cpp
+*.qmltypes
+
+# Qt Creator
+*.user
+*.user.*
+
+# IDE and editor
+.idea/
+.vscode/
+
+# Emacs temporary files
+\#*\#
+
+# Temporary files
+*~
+*.swp
+*.swo
