@@ -327,6 +327,21 @@ ApplicationWindow {
                         Layout.fillWidth: true
                     }
 
+                    Label {
+                        text: "Speech rate"
+                        Layout.fillWidth: true
+                    }
+
+                    Slider {
+                        id: speechRateSlider
+                        Layout.fillWidth: true
+                        from: -1.0
+                        to: 1.0
+                        value: contentController.speechRate
+
+                        onMoved: contentController.speechRate = value
+                    }
+
                     Button {
                         text: "Close"
                         Layout.alignment: Qt.AlignRight

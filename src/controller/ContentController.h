@@ -29,6 +29,7 @@ class ContentController : public QObject
     Q_PROPERTY(bool canGoNext READ canGoNext NOTIFY paragraphStateChanged)
 
     Q_PROPERTY(bool speechActive READ speechActive NOTIFY speechStateChanged)
+    Q_PROPERTY(double speechRate READ speechRate WRITE setSpeechRate NOTIFY speechRateChanged)
     Q_PROPERTY(QString speechEngineName READ speechEngineName NOTIFY speechInfoChanged)
     Q_PROPERTY(QString speechVoiceName READ speechVoiceName NOTIFY speechInfoChanged)
     Q_PROPERTY(QString speechLicense READ speechLicense CONSTANT)
@@ -56,6 +57,8 @@ public:
     Q_INVOKABLE void nextParagraph();
 
     bool speechActive() const;
+    double speechRate() const;
+    void setSpeechRate(double rate);
     QString speechEngineName() const;
     QString speechVoiceName() const;
     QString speechLicense() const;
@@ -74,6 +77,7 @@ signals:
     void errorChanged();
 
     void speechStateChanged();
+    void speechRateChanged();
     void speechInfoChanged();
 
 private:

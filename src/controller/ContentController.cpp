@@ -339,6 +339,25 @@ bool ContentController::speechActive() const
     return m_speech && m_speech->state() != QTextToSpeech::Ready;
 }
 
+double ContentController::speechRate() const
+{
+    return m_speech ? m_speech->rate() : 0.0;
+}
+
+void ContentController::setSpeechRate(double rate)
+{
+    if (!m_speech)
+        return;
+
+    rate = qBound(-1.0, rate, 1.0);
+
+    if (qFuzzyCompare(m_speech->rate(), rate))
+        return;
+
+    m_speech->setRate(rate);
+    emit speechRateChanged();
+}
+
 QString ContentController::speechEngineName() const
 {
     return QStringLiteral("eSpeak NG (via Speech Dispatcher)");
