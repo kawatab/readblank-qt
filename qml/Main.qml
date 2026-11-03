@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Yasuhiro Yamakawa <kawatab@gmail.com>
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -16,8 +19,8 @@ ApplicationWindow {
     }
 
     header: ToolBar {
-	padding: 0
-	
+        padding: 0
+
         RowLayout {
             anchors.fill: parent
             anchors.bottomMargin: 3
@@ -48,14 +51,38 @@ ApplicationWindow {
             }
         }
 
-        ProgressBar {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
+        // NOTE: Qt Quick Controls' ProgressBar causes EGL warnings
+        // when hardware-accelerated rendering is used on Wayland.
+        // Use a custom Rectangle-based indicator instead.
+        // ProgressBar {
+        //     anchors.left: parent.left
+        //     anchors.right: parent.right
+        //     anchors.bottom: parent.bottom
+        //     visible: contentController.loading
+        //     indeterminate: true
+        //     height: 3
+        // }
 
+        Rectangle {
+            id: progressIndicator
+
+            width: parent.width * 0.3
+            height: 3
+            y: parent.height - height
+            color: palette.highlight
             visible: contentController.loading
-            indeterminate: true
-	    height: 3
+
+            SequentialAnimation on x {
+                running: progressIndicator.visible
+                loops: Animation.Infinite
+
+                NumberAnimation {
+                    from: -progressIndicator.width
+                    to: progressIndicator.parent.width
+                    duration: 1200
+                    easing.type: Easing.Linear
+                }
+            }
         }
     }
 
