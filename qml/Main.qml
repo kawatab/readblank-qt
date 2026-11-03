@@ -16,24 +16,46 @@ ApplicationWindow {
     }
 
     header: ToolBar {
+	padding: 0
+	
         RowLayout {
             anchors.fill: parent
+            anchors.bottomMargin: 3
 
             ToolButton {
-                text: "\u2630"
+                icon.name: "open-menu-symbolic"
                 onClicked: leftDrawer.open()
             }
-
             Label {
-                text: "ReadBlank"
+                text: contentController.title
                 font.bold: true
+            }
+
+            Item {
                 Layout.fillWidth: true
             }
 
             ToolButton {
-                text: "\u2699"
-                onClicked: rightDrawer.open()
+                icon.name: contentController.loading ? "process-stop" : "edit-copy"
+
+                onClicked: {
+                    if (contentController.loading) {
+                        contentController.cancelLoading();
+                    } else {
+                        rightDrawer.open();
+                    }
+                }
             }
+        }
+
+        ProgressBar {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+
+            visible: contentController.loading
+            indeterminate: true
+	    height: 3
         }
     }
 

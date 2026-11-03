@@ -15,6 +15,7 @@ class ContentController : public QObject
 {
     Q_OBJECT
 
+    Q_PROPERTY(QString title READ title NOTIFY titleChanged)
     Q_PROPERTY(QString content READ content NOTIFY contentChanged)
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
     Q_PROPERTY(QObject *currentModel READ currentModel NOTIFY currentModelChanged)
@@ -23,14 +24,17 @@ class ContentController : public QObject
 public:
     explicit ContentController(QObject *parent = nullptr);
 
+    QString title() const;
     QString content() const;
     bool loading() const;
     QObject *currentModel() const;
     QString errorString() const;
 
     Q_INVOKABLE void loadFavorite(QObject *object);
+    Q_INVOKABLE void cancelLoading();
 
 signals:
+    void titleChanged();
     void contentChanged();
     void loadingChanged();
     void currentModelChanged();
@@ -43,6 +47,7 @@ private:
     QNetworkReply *m_currentReply = nullptr;
 
     QPointer<ContentModel> m_currentModel;
+    QMetaObject::Connection m_titleConnection;
 
     QString m_content;
     QString m_errorString;

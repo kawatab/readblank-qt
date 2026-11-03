@@ -108,6 +108,11 @@ QByteArray getEncoding(const QString &contentType)
 
 ContentController::ContentController(QObject *parent) : QObject(parent) { }
 
+QString ContentController::title() const
+{
+    return m_currentModel ? m_currentModel->title() : QString();
+}
+
 QString ContentController::content() const
 {
     return m_content;
@@ -150,8 +155,20 @@ void ContentController::loadFavorite(QObject *object)
 
     cancelCurrentRequest();
 
+    // Disconnect the previous model.
+    disconnect(m_titleConnection);
+
+    // Set the current model.
     m_currentModel = model;
+
     emit currentModelChanged();
+    emit titleChanged();
+
+    // Observe title changes of the current model.
+    if (model) {
+        m_titleConnection =
+                connect(model, &ContentModel::titleChanged, this, &ContentController::titleChanged);
+    }
 
     model->setLastAccessed(QDateTime::currentDateTime());
 
@@ -170,7 +187,7 @@ void ContentController::loadFavorite(QObject *object)
     if (model->loaded()) {
         if (m_content != model->content()) {
             m_content = model->content();
-            emit contentChanged();
+            emit titleChanged();
         }
 
         m_errorString.clear();
@@ -248,4 +265,9 @@ void ContentController::loadFavorite(QObject *object)
         m_loading = false;
         emit loadingChanged();
     });
+}
+
+void ContentController::cancelLoading()
+{
+    cancelCurrentRequest();
 }
