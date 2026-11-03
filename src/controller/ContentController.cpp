@@ -5,6 +5,7 @@
 
 #include <QNetworkRequest>
 #include <QRegularExpression>
+#include <QSettings>
 #include <libxml/HTMLparser.h>
 #include <libxml/tree.h>
 
@@ -111,7 +112,12 @@ ContentController::ContentController(QObject *parent) : QObject(parent)
     m_speech = new QTextToSpeech(this);
 
     connect(m_speech, &QTextToSpeech::stateChanged, this,
-            [this](QTextToSpeech::State) { emit speechStateChanged(); });
+            [this](QTextToSpeech::State state) { emit speechStateChanged(); });
+
+    QSettings settings;
+    const double savedRate = settings.value("speechRate", 0.0).toDouble();
+
+    m_speech->setRate(qBound(-1.0, savedRate, 1.0));
 }
 
 QString ContentController::title() const
@@ -158,6 +164,8 @@ void ContentController::cancelCurrentRequest()
 void ContentController::loadFavorite(QObject *object)
 {
     ContentModel *model = qobject_cast<ContentModel *>(object);
+
+    stopSpeaking();
 
     cancelCurrentRequest();
 
@@ -336,7 +344,7 @@ void ContentController::nextParagraph()
 
 bool ContentController::speechActive() const
 {
-    return m_speech && m_speech->state() != QTextToSpeech::Ready;
+    return m_speech && m_speech->state() == QTextToSpeech::Speaking;
 }
 
 double ContentController::speechRate() const
@@ -355,6 +363,10 @@ void ContentController::setSpeechRate(double rate)
         return;
 
     m_speech->setRate(rate);
+
+    QSettings settings;
+    settings.setValue("speechRate", rate);
+
     emit speechRateChanged();
 }
 
@@ -446,6 +458,8 @@ void ContentController::updateSpeechVoice()
 
         // Keep the first voice for the same language as a fallback.
         if (!localeFound) {
+            qWarning() << "No suitable speech voice available for:" << language;
+            qWarning() << "Available locales:" << availableLocales;
             selectedLocale = locale;
             localeFound = true;
         }
