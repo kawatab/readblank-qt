@@ -6,7 +6,7 @@ set(PROJECT_DISPLAY_NAME "ReadBlank Qt")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick Network)
+find_package(Qt6 REQUIRED COMPONENTS Quick Network TextToSpeech)
 find_package(LibXml2 REQUIRED)
 
 qt_standard_project_setup(REQUIRES 6.5)
@@ -41,6 +41,7 @@ target_link_libraries(ReadBlankQt
     PRIVATE
         Qt6::Quick
         Qt6::Network
+        Qt6::TextToSpeech
 	LibXml2::LibXml2
 )
 

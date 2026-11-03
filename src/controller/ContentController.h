@@ -3,11 +3,13 @@
 
 #pragma once
 
-#include <QObject>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QObject>
 #include <QPointer>
+#include <QTextToSpeech>
 #include <QUrl>
+#include <QVoice>
 
 #include "../model/ContentModel.h"
 
@@ -21,6 +23,16 @@ class ContentController : public QObject
     Q_PROPERTY(QObject *currentModel READ currentModel NOTIFY currentModelChanged)
     Q_PROPERTY(QString errorString READ errorString NOTIFY errorChanged)
 
+    Q_PROPERTY(QString currentParagraph READ currentParagraph NOTIFY paragraphStateChanged)
+    Q_PROPERTY(int paragraphCount READ paragraphCount NOTIFY paragraphStateChanged)
+    Q_PROPERTY(bool canGoPrevious READ canGoPrevious NOTIFY paragraphStateChanged)
+    Q_PROPERTY(bool canGoNext READ canGoNext NOTIFY paragraphStateChanged)
+
+    Q_PROPERTY(QString speechEngineName READ speechEngineName NOTIFY speechInfoChanged)
+    Q_PROPERTY(QString speechVoiceName READ speechVoiceName NOTIFY speechInfoChanged)
+    Q_PROPERTY(QString speechLicense READ speechLicense CONSTANT)
+    Q_PROPERTY(QString speechProjectUrl READ speechProjectUrl CONSTANT)
+
 public:
     explicit ContentController(QObject *parent = nullptr);
 
@@ -33,23 +45,45 @@ public:
     Q_INVOKABLE void loadFavorite(QObject *object);
     Q_INVOKABLE void cancelLoading();
 
+    QString currentParagraph() const;
+    int paragraphCount() const;
+    bool canGoPrevious() const;
+    bool canGoNext() const;
+
+    Q_INVOKABLE void previousParagraph();
+    Q_INVOKABLE void nextParagraph();
+
+    QString speechEngineName() const;
+    QString speechVoiceName() const;
+    QString speechLicense() const;
+    QString speechProjectUrl() const;
+
+    Q_INVOKABLE void speakCurrentParagraph();
+
 signals:
     void titleChanged();
+    void paragraphStateChanged();
     void contentChanged();
     void loadingChanged();
     void currentModelChanged();
     void errorChanged();
+    void speechInfoChanged();
 
 private:
     void cancelCurrentRequest();
+    void updateSpeechVoice();
 
-    QNetworkAccessManager m_networkManager;
-    QNetworkReply *m_currentReply = nullptr;
+    QString m_content;
+    int m_paragraphIndex = 0;
 
     QPointer<ContentModel> m_currentModel;
     QMetaObject::Connection m_titleConnection;
-
-    QString m_content;
-    QString m_errorString;
+    QMetaObject::Connection m_paragraphsConnection;
     bool m_loading = false;
+    QString m_errorString;
+    QNetworkAccessManager m_networkManager;
+    QNetworkReply *m_currentReply = nullptr;
+
+    QTextToSpeech *m_speech = nullptr;
+    QVoice m_currentVoice;
 };

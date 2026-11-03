@@ -6,6 +6,7 @@
 #include <QDateTime>
 #include <QObject>
 #include <QString>
+#include <QStringList>
 
 class ContentModel : public QObject
 {
@@ -25,6 +26,7 @@ public:
     QString title() const;
     QString language() const;
     QDateTime lastAccessed() const;
+    QStringList paragraphs() const;
     QString content() const;
 
     bool loaded() const;
@@ -36,7 +38,7 @@ public:
 
     void setMetadata(const QString &title, const QString &language);
 
-    void setContent(const QString &content);
+    void setParagraphs(const QStringList &paragraphs);
     void clearCache();
 
 signals:
@@ -52,7 +54,7 @@ private:
     QString m_title;
     QString m_language;
     QDateTime m_lastAccessed;
-    QString m_content;
+    QStringList m_paragraphs;
 
     bool m_loaded = false;
 };

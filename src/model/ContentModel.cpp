@@ -28,9 +28,14 @@ QDateTime ContentModel::lastAccessed() const
     return m_lastAccessed;
 }
 
+QStringList ContentModel::paragraphs() const
+{
+    return m_paragraphs;
+}
+
 QString ContentModel::content() const
 {
-    return m_content;
+    return m_paragraphs.join('\n');
 }
 
 bool ContentModel::loaded() const
@@ -82,18 +87,18 @@ void ContentModel::setMetadata(
     setLanguage(language);
 }
 
-void ContentModel::setContent(const QString &content)
+void ContentModel::setParagraphs(const QStringList &paragraphs)
 {
-    const bool contentChangedValue = m_content != content;
+    const bool paragraphsChanged = m_paragraphs != paragraphs;
     const bool loadedChangedValue = !m_loaded;
 
-    if (!contentChangedValue && !loadedChangedValue)
+    if (!paragraphsChanged && !loadedChangedValue)
         return;
 
-    m_content = content;
+    m_paragraphs = paragraphs;
     m_loaded = true;
 
-    if (contentChangedValue)
+    if (paragraphsChanged)
         emit contentChanged();
 
     if (loadedChangedValue)
@@ -105,7 +110,7 @@ void ContentModel::clearCache()
     if (!m_loaded)
         return;
 
-    m_content.clear();
+    m_paragraphs.clear();
     m_loaded = false;
 
     emit contentChanged();

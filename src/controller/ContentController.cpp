@@ -14,7 +14,7 @@ struct ParsedContent
 {
     QString title;
     QString language;
-    QString content;
+    QStringList paragraphs;
 };
 
 QString nodeText(xmlNode *node)
@@ -84,7 +84,7 @@ ParsedContent parseHtml(const QByteArray &html, const QByteArray &encoding = {})
 
     findElements(root, result, paragraphs);
 
-    result.content = paragraphs.join('\n');
+    result.paragraphs = paragraphs;
 
     xmlFreeDoc(doc);
 
@@ -106,7 +106,10 @@ QByteArray getEncoding(const QString &contentType)
 
 } // namespace
 
-ContentController::ContentController(QObject *parent) : QObject(parent) { }
+ContentController::ContentController(QObject *parent) : QObject(parent)
+{
+    m_speech = new QTextToSpeech(this);
+}
 
 QString ContentController::title() const
 {
@@ -160,14 +163,18 @@ void ContentController::loadFavorite(QObject *object)
 
     // Set the current model.
     m_currentModel = model;
+    m_paragraphIndex = 0;
+    updateSpeechVoice();
 
-    emit currentModelChanged();
+    emit paragraphStateChanged();
     emit titleChanged();
 
     // Observe title changes of the current model.
     if (model) {
         m_titleConnection =
                 connect(model, &ContentModel::titleChanged, this, &ContentController::titleChanged);
+        m_paragraphsConnection = connect(model, &ContentModel::contentChanged, this,
+                                         &ContentController::paragraphStateChanged);
     }
 
     model->setLastAccessed(QDateTime::currentDateTime());
@@ -245,11 +252,12 @@ void ContentController::loadFavorite(QObject *object)
 
             if (m_currentModel) {
                 m_currentModel->setMetadata(parsed.title, parsed.language);
+                updateSpeechVoice();
 
-                m_currentModel->setContent(parsed.content);
+                m_currentModel->setParagraphs(parsed.paragraphs);
             }
 
-            m_content = parsed.content;
+            m_content = parsed.paragraphs.join('\n');
             emit contentChanged();
 
         } else {
@@ -270,4 +278,164 @@ void ContentController::loadFavorite(QObject *object)
 void ContentController::cancelLoading()
 {
     cancelCurrentRequest();
+}
+
+QString ContentController::currentParagraph() const
+{
+    if (!m_currentModel)
+        return {};
+
+    const QStringList paragraphs = m_currentModel->paragraphs();
+
+    if (m_paragraphIndex < 0 || m_paragraphIndex >= paragraphs.size()) {
+        return {};
+    }
+
+    return paragraphs.at(m_paragraphIndex);
+}
+
+int ContentController::paragraphCount() const
+{
+    return m_currentModel ? m_currentModel->paragraphs().size() : 0;
+}
+
+bool ContentController::canGoPrevious() const
+{
+    return m_currentModel && m_paragraphIndex > 0;
+}
+
+bool ContentController::canGoNext() const
+{
+    return m_currentModel && m_paragraphIndex + 1 < paragraphCount();
+}
+
+void ContentController::previousParagraph()
+{
+    if (!canGoPrevious())
+        return;
+
+    m_speech->stop();
+
+    --m_paragraphIndex;
+    emit paragraphStateChanged();
+}
+
+void ContentController::nextParagraph()
+{
+    if (!canGoNext())
+        return;
+
+    m_speech->stop();
+
+    ++m_paragraphIndex;
+    emit paragraphStateChanged();
+}
+
+QString ContentController::speechEngineName() const
+{
+    return QStringLiteral("eSpeak NG (via Speech Dispatcher)");
+}
+
+QString ContentController::speechVoiceName() const
+{
+    if (!m_speech)
+        return {};
+
+    return m_speech->voice().name();
+}
+
+QString ContentController::speechLicense() const
+{
+    return QStringLiteral("GPL-3.0-or-later");
+}
+
+QString ContentController::speechProjectUrl() const
+{
+    return QStringLiteral("https://github.com/espeak-ng/espeak-ng");
+}
+
+void ContentController::speakCurrentParagraph()
+{
+    if (!m_currentModel || !m_speech)
+        return;
+
+    const QString text = currentParagraph();
+
+    if (text.isEmpty())
+        return;
+
+    m_speech->stop();
+    m_speech->say(text);
+}
+
+void ContentController::updateSpeechVoice()
+{
+    if (!m_speech || !m_currentModel)
+        return;
+
+    const QString language = m_currentModel->language().trimmed();
+
+    // Default to English when the language is unavailable.
+    const QString localeName = language.isEmpty()
+        ? QStringLiteral("en")
+        : language;
+
+    QString normalizedLocaleName = localeName;
+    normalizedLocaleName.replace('-', '_');
+
+    const QLocale requestedLocale(normalizedLocaleName);
+
+    if (requestedLocale.language() == QLocale::C) {
+        qWarning() << "Invalid language tag:" << language;
+        return;
+    }
+
+    const QList<QLocale> availableLocales = m_speech->availableLocales();
+
+    QLocale selectedLocale;
+    bool localeFound = false;
+
+    // Prefer a voice with the exact language and territory.
+    for (const QLocale &locale : availableLocales) {
+        if (locale.language() != requestedLocale.language())
+            continue;
+
+        if (requestedLocale.territory() != QLocale::AnyTerritory
+            && locale.territory() == requestedLocale.territory()) {
+            selectedLocale = locale;
+            localeFound = true;
+            break;
+        }
+
+        // Keep the first voice for the same language as a fallback.
+        if (!localeFound) {
+            selectedLocale = locale;
+            localeFound = true;
+        }
+    }
+
+    if (!localeFound && requestedLocale.language() != QLocale::English) {
+        // Fall back to English.
+        for (const QLocale &locale : availableLocales) {
+            if (locale.language() == QLocale::English) {
+                selectedLocale = locale;
+                localeFound = true;
+                break;
+            }
+        }
+    }
+
+    if (!localeFound) {
+        qWarning() << "No suitable speech voice available for:" << language;
+        return;
+    }
+
+    m_speech->setLocale(selectedLocale);
+
+    if (m_speech->availableVoices().isEmpty()) {
+        qWarning() << "No speech voice available for locale:" << selectedLocale;
+        return;
+    }
+
+    emit speechInfoChanged();
 }

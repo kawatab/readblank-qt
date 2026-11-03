@@ -228,7 +228,97 @@ ApplicationWindow {
                 width: parent.width
                 readOnly: true
                 wrapMode: TextArea.Wrap
-                text: contentController.content
+                text: contentController.currentParagraph
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+
+            ToolButton {
+                icon.name: "go-previous"
+                enabled: contentController.canGoPrevious
+
+                onClicked: contentController.previousParagraph()
+            }
+
+            ToolButton {
+                icon.name: "go-next"
+                enabled: contentController.canGoNext
+
+                onClicked: contentController.nextParagraph()
+            }
+
+            Item {
+                Layout.fillWidth: true
+            }
+
+            ToolButton {
+                icon.name: "audio-volume-high"
+                enabled: contentController.paragraphCount > 0
+
+                onClicked: contentController.speakCurrentParagraph()
+            }
+
+            ToolButton {
+                icon.name: "dialog-information"
+                onClicked: speechInfoPopup.open()
+            }
+
+            Popup {
+                id: speechInfoPopup
+
+                anchors.centerIn: Overlay.overlay
+                width: Math.min(360, parent.width - 40)
+                padding: 16
+
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 8
+
+                    Label {
+                        text: "Speech synthesis"
+                        font.bold: true
+                        font.pixelSize: 16
+                    }
+
+                    Label {
+                        text: "Engine: " + contentController.speechEngineName
+                        wrapMode: Text.Wrap
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: "Voice: " + contentController.speechVoiceName
+                        wrapMode: Text.Wrap
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: "License: " + contentController.speechLicense
+                        wrapMode: Text.Wrap
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: "Copyright: Jonathan Duddington and other contributors"
+                        wrapMode: Text.Wrap
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: '<a href="' + contentController.speechProjectUrl + '">eSpeak NG project</a>'
+                        textFormat: Text.RichText
+                        onLinkActivated: link => Qt.openUrlExternally(link)
+                        Layout.fillWidth: true
+                    }
+
+                    Button {
+                        text: "Close"
+                        Layout.alignment: Qt.AlignRight
+                        onClicked: speechInfoPopup.close()
+                    }
+                }
             }
         }
 
