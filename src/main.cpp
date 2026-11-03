@@ -6,6 +6,7 @@
 #include <QQmlContext>
 
 #include "controller/ContentController.h"
+#include "controller/SpeechController.h"
 #include "model/FavoriteListModel.h"
 
 int main(int argc, char *argv[])
@@ -17,14 +18,21 @@ int main(int argc, char *argv[])
 
     FavoriteListModel favoriteListModel;
     ContentController contentController;
+    SpeechController speechController;
+
+    QObject::connect(&contentController, &ContentController::paragraphStateChanged,
+                     &speechController, &SpeechController::stop);
+
+    QObject::connect(&contentController, &ContentController::currentModelChanged, &speechController,
+                     &SpeechController::stop);
 
     QQmlApplicationEngine engine;
 
-    engine.rootContext()->setContextProperty(
-        "favoriteListModel", &favoriteListModel);
+    engine.rootContext()->setContextProperty("favoriteListModel", &favoriteListModel);
 
-    engine.rootContext()->setContextProperty(
-        "contentController", &contentController);
+    engine.rootContext()->setContextProperty("contentController", &contentController);
+
+    engine.rootContext()->setContextProperty("speechController", &speechController);
 
     engine.loadFromModule("ReadBlankQt", "Main");
 

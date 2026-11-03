@@ -232,6 +232,14 @@ ApplicationWindow {
             }
         }
 
+        Label {
+            visible: speechController.errorString !== ""
+            text: speechController.errorString
+            color: palette.brightText
+            wrapMode: Text.Wrap
+            Layout.fillWidth: true
+        }
+
         RowLayout {
             Layout.fillWidth: true
 
@@ -254,15 +262,15 @@ ApplicationWindow {
             }
 
             ToolButton {
-                icon.name: contentController.speechActive ? "media-playback-stop" : "audio-volume-high"
+                icon.name: speechController.speaking ? "media-playback-stop" : "audio-volume-high"
 
                 enabled: contentController.paragraphCount > 0
 
                 onClicked: {
-                    if (contentController.speechActive)
-                        contentController.stopSpeaking();
+                    if (speechController.speaking)
+                        speechController.stop();
                     else
-                        contentController.speakCurrentParagraph();
+                        speechController.speak(contentController.currentParagraph, contentController.language);
                 }
             }
 
@@ -289,59 +297,74 @@ ApplicationWindow {
                     }
 
                     Label {
-                        text: "Engine: " + contentController.speechEngineName
+                        text: "Engine: Piper"
                         wrapMode: Text.Wrap
                         Layout.fillWidth: true
                     }
 
                     Label {
-                        text: "Voice: " + contentController.speechVoiceName
+                        text: "Voice: " + speechController.voiceForLanguage(contentController.language)
                         wrapMode: Text.Wrap
                         Layout.fillWidth: true
                     }
 
                     Label {
-                        visible: contentController.speechVoiceFallback
-                        text: "The requested language is unavailable. Using English instead."
-                        color: palette.placeholderText
+                        text: "Engine license: GPL-3.0-or-later"
                         wrapMode: Text.Wrap
                         Layout.fillWidth: true
                     }
 
                     Label {
-                        text: "License: " + contentController.speechLicense
+                        text: "Voice models have their own licenses."
                         wrapMode: Text.Wrap
                         Layout.fillWidth: true
                     }
 
                     Label {
-                        text: "Copyright: Jonathan Duddington and other contributors"
-                        wrapMode: Text.Wrap
-                        Layout.fillWidth: true
-                    }
-
-                    Label {
-                        text: '<a href="' + contentController.speechProjectUrl + '">eSpeak NG project</a>'
+                        text: '<a href="https://github.com/OHF-Voice/piper1-gpl">Piper project</a>'
                         textFormat: Text.RichText
                         onLinkActivated: link => Qt.openUrlExternally(link)
                         Layout.fillWidth: true
                     }
 
                     Label {
-                        text: "Speech rate"
+                        text: "Speech speed"
                         Layout.fillWidth: true
                     }
 
                     Slider {
-                        id: speechRateSlider
-                        Layout.fillWidth: true
-                        from: -1.0
-                        to: 1.0
-                        value: contentController.speechRate
+                        id: speechSpeedSlider
 
-                        onMoved: contentController.speechRate = value
+                        Layout.fillWidth: true
+                        from: 0.5
+                        to: 2.0
+                        stepSize: 0.05
+                        value: 1.0 / speechController.lengthScale
+
+                        onMoved: speechController.lengthScale = 1.0 / value
                     }
 
+                    RowLayout {
+                        Layout.fillWidth: true
+
+                        Label {
+                            text: "Slower"
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
+                        Label {
+                            text: "Faster"
+                        }
+                    }
+
+                    Label {
+                        text: "Normal speed: 1.0"
+                        color: palette.placeholderText
+                        Layout.fillWidth: true
+                    }
                     Button {
                         text: "Close"
                         Layout.alignment: Qt.AlignRight
