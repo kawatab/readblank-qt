@@ -254,10 +254,16 @@ ApplicationWindow {
             }
 
             ToolButton {
-                icon.name: "audio-volume-high"
+                icon.name: contentController.speechActive ? "media-playback-stop" : "audio-volume-high"
+
                 enabled: contentController.paragraphCount > 0
 
-                onClicked: contentController.speakCurrentParagraph()
+                onClicked: {
+                    if (contentController.speechActive)
+                        contentController.stopSpeaking();
+                    else
+                        contentController.speakCurrentParagraph();
+                }
             }
 
             ToolButton {
@@ -290,6 +296,14 @@ ApplicationWindow {
 
                     Label {
                         text: "Voice: " + contentController.speechVoiceName
+                        wrapMode: Text.Wrap
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        visible: contentController.speechVoiceFallback
+                        text: "The requested language is unavailable. Using English instead."
+                        color: palette.placeholderText
                         wrapMode: Text.Wrap
                         Layout.fillWidth: true
                     }

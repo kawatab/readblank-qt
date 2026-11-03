@@ -109,6 +109,9 @@ QByteArray getEncoding(const QString &contentType)
 ContentController::ContentController(QObject *parent) : QObject(parent)
 {
     m_speech = new QTextToSpeech(this);
+
+    connect(m_speech, &QTextToSpeech::stateChanged, this,
+            [this](QTextToSpeech::State) { emit speechStateChanged(); });
 }
 
 QString ContentController::title() const
@@ -331,6 +334,11 @@ void ContentController::nextParagraph()
     emit paragraphStateChanged();
 }
 
+bool ContentController::speechActive() const
+{
+    return m_speech && m_speech->state() != QTextToSpeech::Ready;
+}
+
 QString ContentController::speechEngineName() const
 {
     return QStringLiteral("eSpeak NG (via Speech Dispatcher)");
@@ -354,6 +362,11 @@ QString ContentController::speechProjectUrl() const
     return QStringLiteral("https://github.com/espeak-ng/espeak-ng");
 }
 
+bool ContentController::speechVoiceFallback() const
+{
+    return m_speechVoiceFallback;
+}
+
 void ContentController::speakCurrentParagraph()
 {
     if (!m_currentModel || !m_speech)
@@ -368,17 +381,22 @@ void ContentController::speakCurrentParagraph()
     m_speech->say(text);
 }
 
+void ContentController::stopSpeaking()
+{
+    if (m_speech)
+        m_speech->stop();
+}
+
 void ContentController::updateSpeechVoice()
 {
     if (!m_speech || !m_currentModel)
         return;
 
+    m_speechVoiceFallback = false;
     const QString language = m_currentModel->language().trimmed();
 
     // Default to English when the language is unavailable.
-    const QString localeName = language.isEmpty()
-        ? QStringLiteral("en")
-        : language;
+    const QString localeName = language.isEmpty() ? QStringLiteral("en") : language;
 
     QString normalizedLocaleName = localeName;
     normalizedLocaleName.replace('-', '_');
@@ -420,6 +438,7 @@ void ContentController::updateSpeechVoice()
             if (locale.language() == QLocale::English) {
                 selectedLocale = locale;
                 localeFound = true;
+                m_speechVoiceFallback = true;
                 break;
             }
         }

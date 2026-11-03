@@ -28,10 +28,12 @@ class ContentController : public QObject
     Q_PROPERTY(bool canGoPrevious READ canGoPrevious NOTIFY paragraphStateChanged)
     Q_PROPERTY(bool canGoNext READ canGoNext NOTIFY paragraphStateChanged)
 
+    Q_PROPERTY(bool speechActive READ speechActive NOTIFY speechStateChanged)
     Q_PROPERTY(QString speechEngineName READ speechEngineName NOTIFY speechInfoChanged)
     Q_PROPERTY(QString speechVoiceName READ speechVoiceName NOTIFY speechInfoChanged)
     Q_PROPERTY(QString speechLicense READ speechLicense CONSTANT)
     Q_PROPERTY(QString speechProjectUrl READ speechProjectUrl CONSTANT)
+    Q_PROPERTY(bool speechVoiceFallback READ speechVoiceFallback NOTIFY speechInfoChanged)
 
 public:
     explicit ContentController(QObject *parent = nullptr);
@@ -53,12 +55,15 @@ public:
     Q_INVOKABLE void previousParagraph();
     Q_INVOKABLE void nextParagraph();
 
+    bool speechActive() const;
     QString speechEngineName() const;
     QString speechVoiceName() const;
     QString speechLicense() const;
     QString speechProjectUrl() const;
+    bool speechVoiceFallback() const;
 
     Q_INVOKABLE void speakCurrentParagraph();
+    Q_INVOKABLE void stopSpeaking();
 
 signals:
     void titleChanged();
@@ -67,6 +72,8 @@ signals:
     void loadingChanged();
     void currentModelChanged();
     void errorChanged();
+
+    void speechStateChanged();
     void speechInfoChanged();
 
 private:
@@ -86,4 +93,5 @@ private:
 
     QTextToSpeech *m_speech = nullptr;
     QVoice m_currentVoice;
+    bool m_speechVoiceFallback = false;
 };
