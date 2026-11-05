@@ -27,6 +27,7 @@ class ContentController : public QObject
 
     Q_PROPERTY(QString currentParagraph READ currentParagraph NOTIFY paragraphStateChanged)
     Q_PROPERTY(int paragraphCount READ paragraphCount NOTIFY paragraphStateChanged)
+    Q_PROPERTY(int currentParagraphIndex READ currentParagraphIndex NOTIFY paragraphStateChanged)
     Q_PROPERTY(bool canGoPrevious READ canGoPrevious NOTIFY paragraphStateChanged)
     Q_PROPERTY(bool canGoNext READ canGoNext NOTIFY paragraphStateChanged)
 
@@ -51,11 +52,15 @@ public:
 
     QString currentParagraph() const;
     int paragraphCount() const;
+    int currentParagraphIndex() const;
     bool canGoPrevious() const;
     bool canGoNext() const;
 
     Q_INVOKABLE void previousParagraph();
     Q_INVOKABLE void nextParagraph();
+    Q_INVOKABLE void firstParagraph();
+    Q_INVOKABLE void lastParagraph();
+    Q_INVOKABLE void setCurrentParagraph(int index);
 
     QString currentParagraphHtml() const;
 

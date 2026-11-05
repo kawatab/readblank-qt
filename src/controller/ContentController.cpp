@@ -314,6 +314,11 @@ int ContentController::paragraphCount() const
     return m_currentModel ? m_currentModel->paragraphs().size() : 0;
 }
 
+int ContentController::currentParagraphIndex() const
+{
+    return m_paragraphIndex;
+}
+
 bool ContentController::canGoPrevious() const
 {
     return m_currentModel && m_paragraphIndex > 0;
@@ -326,26 +331,35 @@ bool ContentController::canGoNext() const
 
 void ContentController::previousParagraph()
 {
-    if (!canGoPrevious())
-        return;
-
-    --m_paragraphIndex;
-
-    updateWordSelection();
-
-    emit currentParagraphChanged();
-    emit paragraphStateChanged();
+    if (canGoPrevious())
+        setCurrentParagraph(m_paragraphIndex - 1);
 }
 
 void ContentController::nextParagraph()
 {
-    if (!canGoNext())
+    if (canGoNext())
+        setCurrentParagraph(m_paragraphIndex + 1);
+}
+
+void ContentController::firstParagraph()
+{
+    setCurrentParagraph(0);
+}
+
+void ContentController::lastParagraph()
+{
+    setCurrentParagraph(paragraphCount() - 1);
+}
+
+void ContentController::setCurrentParagraph(int index)
+{
+    if (index < 0 || index >= paragraphCount()
+        || index == m_paragraphIndex)
         return;
 
-    ++m_paragraphIndex;
+    m_paragraphIndex = index;
 
     updateWordSelection();
-
     emit currentParagraphChanged();
     emit paragraphStateChanged();
 }

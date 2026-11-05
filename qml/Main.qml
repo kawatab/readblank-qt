@@ -187,7 +187,7 @@ ApplicationWindow {
                 }
 
                 Slider {
-		    id: volumeSlider
+                    id: volumeSlider
                     Layout.fillWidth: true
                     from: 0.0
                     to: 1.0
@@ -240,6 +240,48 @@ ApplicationWindow {
                     Label {
                         text: "Maximum"
                     }
+                }
+            }
+
+            ColumnLayout {
+                width: parent.width
+                spacing: 8
+
+                Label {
+                    text: "Speech synthesis"
+                    font.bold: true
+                    font.pixelSize: 16
+                }
+
+                Label {
+                    text: "Engine: Piper"
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                }
+
+                Label {
+                    text: "Voice: " + speechController.voiceForLanguage(contentController.language)
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                }
+
+                Label {
+                    text: "Engine license: GPL-3.0-or-later"
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                }
+
+                Label {
+                    text: "Voice models have their own licenses."
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                }
+
+                Label {
+                    text: '<a href="https://github.com/OHF-Voice/piper1-gpl">Piper project</a>'
+                    textFormat: Text.RichText
+                    onLinkActivated: link => Qt.openUrlExternally(link)
+                    Layout.fillWidth: true
                 }
             }
 
@@ -366,7 +408,7 @@ ApplicationWindow {
             TextArea {
                 width: parent.width
                 readOnly: true
-                selectByMouse: true
+                selectByMouse: false
                 wrapMode: TextArea.Wrap
                 textFormat: TextEdit.RichText
 
@@ -390,29 +432,45 @@ ApplicationWindow {
         }
 
         RowLayout {
-            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignHCenter
 
-            ToolButton {
+            Button {
                 icon.name: "go-previous"
                 enabled: contentController.canSelectPreviousWord
                 ToolTip.text: "Previous selectable word"
 
                 onClicked: contentController.previousWord()
+
+                background: Rectangle {
+                    radius: width / 2
+                    color: palette.text
+
+                    border.color: palette.button
+                    border.width: 1
+                }
+
+                icon.color: palette.base
             }
 
-            ToolButton {
+            Button {
                 icon.name: "go-next"
                 enabled: contentController.canSelectNextWord
                 ToolTip.text: "Next selectable word"
 
                 onClicked: contentController.nextWord()
+
+                background: Rectangle {
+                    radius: width / 2
+                    color: palette.text
+
+                    border.color: palette.button
+                    border.width: 1
+                }
+
+                icon.color: palette.base
             }
 
-            Item {
-                Layout.fillWidth: true
-            }
-
-            ToolButton {
+            Button {
                 icon.name: speechController.speaking ? "media-playback-stop" : "audio-volume-high"
 
                 enabled: contentController.paragraphCount > 0
@@ -423,68 +481,22 @@ ApplicationWindow {
                     else
                         speechController.speak(contentController.currentParagraph, contentController.language);
                 }
-            }
 
-            ToolButton {
-                icon.name: "dialog-information"
-                onClicked: speechInfoPopup.open()
-            }
+                background: Rectangle {
+                    radius: width / 2
+                    color: palette.text
 
-            Popup {
-                id: speechInfoPopup
-
-                anchors.centerIn: Overlay.overlay
-                width: Math.min(360, parent.width - 40)
-                padding: 16
-
-                ColumnLayout {
-                    width: parent.width
-                    spacing: 8
-
-                    Label {
-                        text: "Speech synthesis"
-                        font.bold: true
-                        font.pixelSize: 16
-                    }
-
-                    Label {
-                        text: "Engine: Piper"
-                        wrapMode: Text.Wrap
-                        Layout.fillWidth: true
-                    }
-
-                    Label {
-                        text: "Voice: " + speechController.voiceForLanguage(contentController.language)
-                        wrapMode: Text.Wrap
-                        Layout.fillWidth: true
-                    }
-
-                    Label {
-                        text: "Engine license: GPL-3.0-or-later"
-                        wrapMode: Text.Wrap
-                        Layout.fillWidth: true
-                    }
-
-                    Label {
-                        text: "Voice models have their own licenses."
-                        wrapMode: Text.Wrap
-                        Layout.fillWidth: true
-                    }
-
-                    Label {
-                        text: '<a href="https://github.com/OHF-Voice/piper1-gpl">Piper project</a>'
-                        textFormat: Text.RichText
-                        onLinkActivated: link => Qt.openUrlExternally(link)
-                        Layout.fillWidth: true
-                    }
-
-                    Button {
-                        text: "Close"
-                        Layout.alignment: Qt.AlignRight
-                        onClicked: speechInfoPopup.close()
-                    }
+                    border.color: palette.button
+                    border.width: 1
                 }
+
+                icon.color: palette.base
             }
+
+            // ToolButton {
+            //     icon.name: "dialog-information"
+            //     onClicked: speechInfoPopup.open()
+            // }
         }
 
         Flow {
@@ -514,20 +526,69 @@ ApplicationWindow {
         }
 
         RowLayout {
-            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignHCenter
 
             ToolButton {
-                icon.name: "go-previous"
+                icon.name: "media-skip-backward"
+                display: AbstractButton.IconOnly
                 enabled: contentController.canGoPrevious
-
-                onClicked: contentController.previousParagraph()
+                onClicked: contentController.firstParagraph()
             }
 
             ToolButton {
-                icon.name: "go-next"
-                enabled: contentController.canGoNext
+                icon.name: "media-seek-backward"
+                display: AbstractButton.IconOnly
+                enabled: contentController.canGoPrevious
+                onClicked: contentController.previousParagraph()
+            }
 
+            ComboBox {
+                id: paragraphSelector
+                Layout.preferredWidth: 100
+                Layout.minimumWidth: 100
+                Layout.maximumWidth: 100
+                enabled: count > 0
+
+                model: contentController.paragraphCount
+
+                currentIndex: contentController.currentParagraphIndex
+
+                displayText: (currentIndex + 1) + " / " + count
+
+                contentItem: Text {
+                    text: paragraphSelector.displayText
+                    font: paragraphSelector.font
+                    color: paragraphSelector.palette.text
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignRight
+                    rightPadding: 8
+                }
+
+                onActivated: index => {
+                    contentController.setCurrentParagraph(index);
+                }
+
+                delegate: ItemDelegate {
+                    required property int index
+
+                    text: index + 1
+                    width: paragraphSelector.width
+                    highlighted: paragraphSelector.highlightedIndex === index
+                }
+            }
+
+            ToolButton {
+                icon.name: "media-seek-forward"
+                display: AbstractButton.IconOnly
+                enabled: contentController.canGoNext
                 onClicked: contentController.nextParagraph()
+            }
+
+            ToolButton {
+                icon.name: "media-skip-forward"
+                display: AbstractButton.IconOnly
+                enabled: contentController.canGoNext
+                onClicked: contentController.lastParagraph()
             }
         }
 
