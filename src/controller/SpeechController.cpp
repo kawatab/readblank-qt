@@ -86,6 +86,7 @@ void SpeechController::speak(const QString &text, const QString &language)
         }
 
         const QByteArray audioData = reply->readAll();
+
         reply->deleteLater();
 
         playAudio(audioData);

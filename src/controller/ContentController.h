@@ -7,7 +7,10 @@
 #include <QNetworkReply>
 #include <QObject>
 #include <QPointer>
+#include <QSet>
 #include <QUrl>
+#include <QVariantList>
+#include <QVector>
 
 #include "../model/ContentModel.h"
 
@@ -27,7 +30,12 @@ class ContentController : public QObject
     Q_PROPERTY(bool canGoPrevious READ canGoPrevious NOTIFY paragraphStateChanged)
     Q_PROPERTY(bool canGoNext READ canGoNext NOTIFY paragraphStateChanged)
 
+    Q_PROPERTY(QString currentParagraphHtml READ currentParagraphHtml NOTIFY paragraphStateChanged)
+    Q_PROPERTY(bool canSelectPreviousWord READ canSelectPreviousWord NOTIFY paragraphStateChanged)
+    Q_PROPERTY(bool canSelectNextWord READ canSelectNextWord NOTIFY paragraphStateChanged)
 
+    Q_PROPERTY(QVariantList selectableWords READ selectableWords NOTIFY paragraphStateChanged)
+    Q_PROPERTY(int selectedWordIndex READ selectedWordIndex NOTIFY paragraphStateChanged)
 public:
     explicit ContentController(QObject *parent = nullptr);
 
@@ -49,25 +57,55 @@ public:
     Q_INVOKABLE void previousParagraph();
     Q_INVOKABLE void nextParagraph();
 
+    QString currentParagraphHtml() const;
+
+    bool canSelectPreviousWord() const;
+    bool canSelectNextWord() const;
+    QVariantList selectableWords() const;
+    int selectedWordIndex() const;
+
+    Q_INVOKABLE void selectWord(int wordIndex);
+    Q_INVOKABLE void previousWord();
+    Q_INVOKABLE void nextWord();
+    Q_INVOKABLE void revealWord(int wordIndex);
+
 signals:
     void titleChanged();
     void paragraphStateChanged();
+    void currentParagraphChanged();
     void contentChanged();
     void languageChanged();
     void loadingChanged();
     void currentModelChanged();
+    void wordRevealed(const QString &word, const QString &language);
     void errorChanged();
 
 private:
     void cancelCurrentRequest();
+    void updateWordSelection();
+    void updateParagraphHtml();
 
     QString m_content;
     int m_paragraphIndex = 0;
+    QVector<int> m_selectableWordIndexes;
+    int m_selectedWordIndex = -1;
+    QString m_currentParagraphHtml;
+
+    struct WordRange
+    {
+        int start;
+        int length;
+        int index;
+    };
+
+    QVector<WordRange> m_words;
+    QSet<int> m_revealedWordIndexes;
+    QSet<int> m_usedButtonIndexes;
 
     QPointer<ContentModel> m_currentModel;
     QMetaObject::Connection m_titleConnection;
     QMetaObject::Connection m_paragraphsConnection;
-    QMetaObject::Connection m_languageConnection; 
+    QMetaObject::Connection m_languageConnection;
     bool m_loading = false;
     QString m_errorString;
     QNetworkAccessManager m_networkManager;

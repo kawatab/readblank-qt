@@ -4,8 +4,11 @@
 #include "ContentController.h"
 
 #include <QNetworkRequest>
+#include <QRandomGenerator>
 #include <QRegularExpression>
+#include <QSet>
 #include <QSettings>
+#include <algorithm>
 #include <libxml/HTMLparser.h>
 #include <libxml/tree.h>
 
@@ -170,6 +173,8 @@ void ContentController::loadFavorite(QObject *object)
     m_currentModel = model;
     m_paragraphIndex = 0;
 
+    updateWordSelection();
+
     emit currentModelChanged();
     emit languageChanged();
     emit paragraphStateChanged();
@@ -180,16 +185,16 @@ void ContentController::loadFavorite(QObject *object)
         m_titleConnection =
                 connect(model, &ContentModel::titleChanged, this, &ContentController::titleChanged);
 
-        m_paragraphsConnection = connect(model, &ContentModel::contentChanged, this,
-                                         &ContentController::paragraphStateChanged);
+        m_paragraphsConnection = connect(model, &ContentModel::contentChanged, this, [this]() {
+            updateWordSelection();
+            emit paragraphStateChanged();
+        });
 
         m_languageConnection = connect(model, &ContentModel::languageChanged, this,
                                        &ContentController::languageChanged);
 
         model->setLastAccessed(QDateTime::currentDateTime());
     }
-
-    model->setLastAccessed(QDateTime::currentDateTime());
 
     if (!model) {
         if (!m_content.isEmpty()) {
@@ -325,6 +330,10 @@ void ContentController::previousParagraph()
         return;
 
     --m_paragraphIndex;
+
+    updateWordSelection();
+
+    emit currentParagraphChanged();
     emit paragraphStateChanged();
 }
 
@@ -334,5 +343,244 @@ void ContentController::nextParagraph()
         return;
 
     ++m_paragraphIndex;
+
+    updateWordSelection();
+
+    emit currentParagraphChanged();
     emit paragraphStateChanged();
+}
+
+void ContentController::updateWordSelection()
+{
+    const QString paragraph = currentParagraph();
+
+    m_words.clear();
+    m_selectableWordIndexes.clear();
+    m_usedButtonIndexes.clear();
+    m_revealedWordIndexes.clear();
+    m_selectedWordIndex = -1;
+
+    // Extract words.
+    int i = 0;
+    int wordIndex = 0;
+
+    while (i < paragraph.size()) {
+        if (!paragraph.at(i).isLetter()) {
+            ++i;
+            continue;
+        }
+
+        const int start = i;
+        ++i;
+
+        while (i < paragraph.size()) {
+            if (paragraph.at(i).isLetter()) {
+                ++i;
+            } else if (paragraph.at(i) == QLatin1Char('\'') && i + 1 < paragraph.size()
+                       && paragraph.at(i + 1).isLetter()) {
+                ++i;
+            } else {
+                break;
+            }
+        }
+
+        m_words.append({ start, i - start, wordIndex });
+        ++wordIndex;
+    }
+
+    const int wordCount = m_words.size();
+
+    if (wordCount == 0) {
+        updateParagraphHtml();
+        return;
+    }
+
+    // Select 30% of the words, rounding up.
+    const int selectableCount = (wordCount * 3 + 9) / 10;
+
+    QVector<int> candidates;
+
+    for (int n = 0; n < wordCount; ++n)
+        candidates.append(n);
+
+    // Shuffle the candidates.
+    for (int n = candidates.size() - 1; n > 0; --n) {
+        const int j = int(QRandomGenerator::global()->bounded(quint32(n + 1)));
+        candidates.swapItemsAt(n, j);
+    }
+
+    candidates.resize(selectableCount);
+
+    std::sort(candidates.begin(), candidates.end());
+
+    m_selectableWordIndexes = candidates;
+
+    m_selectedWordIndex = m_selectableWordIndexes.first();
+
+    updateParagraphHtml();
+}
+
+void ContentController::updateParagraphHtml()
+{
+    QString html;
+    int position = 0;
+
+    for (int i = 0; i < m_words.size(); ++i) {
+        const auto &word = m_words.at(i);
+
+        html += currentParagraph().mid(position, word.start - position).toHtmlEscaped();
+
+        const QString text = currentParagraph().mid(word.start, word.length).toHtmlEscaped();
+
+        if (m_selectableWordIndexes.contains(i)) {
+            const QString background = (i == m_selectedWordIndex) ? "#f0a040" : "#d0d0d0";
+
+            if (m_revealedWordIndexes.contains(i)) {
+
+                html += QStringLiteral(
+                                "<span style=\"background-color:%1;color:#202020;\">%2</span>")
+                                .arg(background, text);
+            } else {
+                html += QStringLiteral("<span "
+                                       "style=\"background-color:%1;color:transparent;\">%2</span>")
+                                .arg(background, text);
+            }
+        } else {
+            html += text;
+        }
+
+        position = word.start + word.length;
+    }
+
+    html += currentParagraph().mid(position).toHtmlEscaped();
+
+    m_currentParagraphHtml = html;
+}
+
+QString ContentController::currentParagraphHtml() const
+{
+    return m_currentParagraphHtml;
+}
+
+bool ContentController::canSelectPreviousWord() const
+{
+    const int position = m_selectableWordIndexes.indexOf(m_selectedWordIndex);
+
+    return position > 0;
+}
+
+bool ContentController::canSelectNextWord() const
+{
+    const int position = m_selectableWordIndexes.indexOf(m_selectedWordIndex);
+
+    return position >= 0 && position + 1 < m_selectableWordIndexes.size();
+}
+
+void ContentController::selectWord(int wordIndex)
+{
+    if (!m_selectableWordIndexes.contains(wordIndex))
+        return;
+
+    if (m_selectedWordIndex == wordIndex)
+        return;
+
+    m_selectedWordIndex = wordIndex;
+
+    updateParagraphHtml();
+    emit paragraphStateChanged();
+}
+
+void ContentController::previousWord()
+{
+    if (!canSelectPreviousWord())
+        return;
+
+    const int position = m_selectableWordIndexes.indexOf(m_selectedWordIndex);
+
+    m_selectedWordIndex = m_selectableWordIndexes.at(position - 1);
+
+    updateParagraphHtml();
+    emit paragraphStateChanged();
+}
+
+void ContentController::nextWord()
+{
+    if (!canSelectNextWord())
+        return;
+
+    const int position = m_selectableWordIndexes.indexOf(m_selectedWordIndex);
+
+    m_selectedWordIndex = m_selectableWordIndexes.at(position + 1);
+
+    updateParagraphHtml();
+    emit paragraphStateChanged();
+}
+
+QVariantList ContentController::selectableWords() const
+{
+    QVariantList result;
+
+    QVector<int> indexes = m_selectableWordIndexes;
+
+    std::sort(indexes.begin(), indexes.end(), [this](int a, int b) {
+        const auto &wordA = m_words.at(a);
+        const auto &wordB = m_words.at(b);
+
+        const QString textA = currentParagraph().mid(wordA.start, wordA.length);
+        const QString textB = currentParagraph().mid(wordB.start, wordB.length);
+
+        return QString::compare(textA, textB, Qt::CaseInsensitive) < 0;
+    });
+
+    for (int index : indexes) {
+        const auto &word = m_words.at(index);
+
+        QVariantMap item;
+        item.insert("index", index);
+        item.insert("text", currentParagraph().mid(word.start, word.length).toLower());
+        item.insert("revealed", m_usedButtonIndexes.contains(index));
+
+        result.append(item);
+    }
+
+    return result;
+}
+
+int ContentController::selectedWordIndex() const
+{
+    return m_selectedWordIndex;
+}
+
+void ContentController::revealWord(int wordIndex)
+{
+    if (!m_selectableWordIndexes.contains(wordIndex))
+        return;
+
+    if (m_usedButtonIndexes.contains(wordIndex))
+        return;
+
+    if (m_selectedWordIndex < 0)
+        return;
+
+    const auto &buttonWord = m_words.at(wordIndex);
+    const auto &selectedWord = m_words.at(m_selectedWordIndex);
+
+    const QString buttonText = currentParagraph().mid(buttonWord.start, buttonWord.length);
+
+    const QString selectedText = currentParagraph().mid(selectedWord.start, selectedWord.length);
+
+    if (QString::compare(buttonText, selectedText, Qt::CaseInsensitive) != 0)
+        return;
+
+    m_usedButtonIndexes.insert(wordIndex);
+    m_revealedWordIndexes.insert(m_selectedWordIndex);
+
+    emit wordRevealed(selectedText, language());
+
+    if (canSelectNextWord())
+        nextWord();
+    else {
+        updateParagraphHtml();
+        emit paragraphStateChanged();
+    }
 }

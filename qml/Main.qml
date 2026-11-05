@@ -11,6 +11,15 @@ ApplicationWindow {
     height: 600
     title: "ReadBlankQt"
 
+    Connections {
+        target: contentController
+
+        function onWordRevealed(word, language) {
+	    console.log("wordRevealed:", word, language);
+            speechController.speak(word, language);
+        }
+    }
+
     Component.onCompleted: {
         const first = favoriteListModel.firstItem();
 
@@ -223,12 +232,23 @@ ApplicationWindow {
         ScrollView {
             Layout.fillWidth: true
             Layout.fillHeight: true
+            Layout.preferredHeight: 5
 
             TextArea {
                 width: parent.width
                 readOnly: true
+                selectByMouse: true
                 wrapMode: TextArea.Wrap
-                text: contentController.currentParagraph
+                textFormat: TextEdit.RichText
+
+                text: contentController.currentParagraphHtml
+
+                onLinkActivated: link => {
+                    if (link.startsWith("word:")) {
+                        const wordIndex = Number(link.substring(5));
+                        contentController.selectWord(wordIndex);
+                    }
+                }
             }
         }
 
@@ -245,16 +265,18 @@ ApplicationWindow {
 
             ToolButton {
                 icon.name: "go-previous"
-                enabled: contentController.canGoPrevious
+                enabled: contentController.canSelectPreviousWord
+                ToolTip.text: "Previous selectable word"
 
-                onClicked: contentController.previousParagraph()
+                onClicked: contentController.previousWord()
             }
 
             ToolButton {
                 icon.name: "go-next"
-                enabled: contentController.canGoNext
+                enabled: contentController.canSelectNextWord
+                ToolTip.text: "Next selectable word"
 
-                onClicked: contentController.nextParagraph()
+                onClicked: contentController.nextWord()
             }
 
             Item {
@@ -371,6 +393,50 @@ ApplicationWindow {
                         onClicked: speechInfoPopup.close()
                     }
                 }
+            }
+        }
+
+        Flow {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.preferredHeight: 5
+            spacing: 6
+
+            Repeater {
+                model: contentController.selectableWords
+
+                delegate: Button {
+                    required property var modelData
+
+                    enabled: !modelData.revealed
+
+                    text: modelData.text
+
+                    implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
+                    implicitHeight: contentItem.implicitHeight + topPadding + bottomPadding
+
+                    onClicked: {
+                        contentController.revealWord(modelData.index);
+                    }
+                }
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+
+            ToolButton {
+                icon.name: "go-previous"
+                enabled: contentController.canGoPrevious
+
+                onClicked: contentController.previousParagraph()
+            }
+
+            ToolButton {
+                icon.name: "go-next"
+                enabled: contentController.canGoNext
+
+                onClicked: contentController.nextParagraph()
             }
         }
 

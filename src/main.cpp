@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     ContentController contentController;
     SpeechController speechController;
 
-    QObject::connect(&contentController, &ContentController::paragraphStateChanged,
+    QObject::connect(&contentController, &ContentController::currentParagraphChanged,
                      &speechController, &SpeechController::stop);
 
     QObject::connect(&contentController, &ContentController::currentModelChanged, &speechController,
