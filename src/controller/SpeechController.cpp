@@ -26,6 +26,7 @@ SpeechController::SpeechController(QObject *parent) : QObject(parent)
 
     QSettings settings;
     m_lengthScale = qBound(0.5, settings.value("speechLengthScale", 1.0).toDouble(), 2.0);
+    m_audioOutput->setVolume(qBound(0.0, settings.value("speechVolume", 1.0).toDouble(), 1.0));
 }
 
 bool SpeechController::speaking() const
@@ -51,6 +52,26 @@ void SpeechController::setLengthScale(double value)
     settings.setValue("speechLengthScale", m_lengthScale);
 
     emit lengthScaleChanged();
+}
+
+double SpeechController::volume() const
+{
+    return m_audioOutput->volume();
+}
+
+void SpeechController::setVolume(double value)
+{
+    value = qBound(0.0, value, 1.0);
+
+    if (qFuzzyCompare(m_audioOutput->volume(), static_cast<float>(value)))
+        return;
+
+    m_audioOutput->setVolume(value);
+
+    QSettings settings;
+    settings.setValue("speechVolume", value);
+
+    emit volumeChanged();
 }
 
 void SpeechController::speak(const QString &text, const QString &language)

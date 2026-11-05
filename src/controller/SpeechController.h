@@ -14,6 +14,7 @@ class SpeechController : public QObject
 
     Q_PROPERTY(bool speaking READ speaking NOTIFY speakingChanged)
     Q_PROPERTY(double lengthScale READ lengthScale WRITE setLengthScale NOTIFY lengthScaleChanged)
+    Q_PROPERTY(double volume READ volume WRITE setVolume NOTIFY volumeChanged)
     Q_PROPERTY(QString errorString READ errorString NOTIFY errorChanged)
 
 public:
@@ -22,6 +23,9 @@ public:
     bool speaking() const;
     double lengthScale() const;
     void setLengthScale(double value);
+    double volume() const;
+    void setVolume(double value);
+
     QString errorString() const;
 
     Q_INVOKABLE void speak(const QString &text, const QString &language);
@@ -31,6 +35,7 @@ public:
 signals:
     void speakingChanged();
     void lengthScaleChanged();
+    void volumeChanged();
     void errorChanged();
 
 private:

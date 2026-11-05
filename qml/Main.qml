@@ -15,7 +15,7 @@ ApplicationWindow {
         target: contentController
 
         function onWordRevealed(word, language) {
-	    console.log("wordRevealed:", word, language);
+            console.log("wordRevealed:", word, language);
             speechController.speak(word, language);
         }
     }
@@ -104,18 +104,147 @@ ApplicationWindow {
 
         ColumnLayout {
             anchors.fill: parent
-            spacing: 0
+            anchors.margins: 12
+            spacing: 8
 
-            ItemDelegate {
-                text: "Open"
+            Label {
+                text: "Speech"
+                font.bold: true
                 Layout.fillWidth: true
-                onClicked: leftDrawer.close()
             }
 
-            ItemDelegate {
-                text: "Recent"
-                Layout.fillWidth: true
-                onClicked: leftDrawer.close()
+            Column {
+                spacing: 4
+
+                Label {
+                    text: "Speed"
+                    Layout.fillWidth: true
+                }
+
+                Slider {
+                    id: speedSlider
+                    Layout.fillWidth: true
+                    from: 0.4
+                    to: 2.0
+                    stepSize: 0.4
+                    snapMode: Slider.SnapAlways
+
+                    value: 1.0 / speechController.lengthScale
+
+                    onMoved: speechController.lengthScale = 1.0 / value
+                }
+
+                Row {
+                    width: speedSlider.availableWidth - speedSlider.handle.width
+                    anchors.horizontalCenter: speedSlider.horizontalCenter
+
+                    Rectangle {
+                        width: 1
+                        height: 5
+                        color: palette.text
+                    }
+
+                    Repeater {
+                        model: 4
+
+                        Item {
+                            width: parent.width / 4
+                            height: 5
+
+                            Rectangle {
+                                width: 1
+                                height: 5
+                                color: palette.text
+                                anchors.horizontalCenter: parent.right
+                            }
+                        }
+                    }
+                }
+
+                RowLayout {
+                    width: speedSlider.availableWidth
+
+                    Label {
+                        text: "Slower"
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: "Faster"
+                    }
+                }
+            }
+
+            Column {
+                spacing: 4
+
+                Label {
+                    text: "Volume"
+                    Layout.fillWidth: true
+                }
+
+                Slider {
+		    id: volumeSlider
+                    Layout.fillWidth: true
+                    from: 0.0
+                    to: 1.0
+                    stepSize: 0.25
+                    snapMode: Slider.SnapAlways
+
+                    value: speechController.volume
+
+                    onMoved: speechController.volume = value
+                }
+
+                Row {
+                    width: volumeSlider.availableWidth - volumeSlider.handle.width
+                    anchors.horizontalCenter: volumeSlider.horizontalCenter
+
+                    Rectangle {
+                        width: 1
+                        height: 5
+                        color: palette.text
+                    }
+
+                    Repeater {
+                        model: 4
+
+                        Item {
+                            width: parent.width / 4
+                            height: 5
+
+                            Rectangle {
+                                width: 1
+                                height: 5
+                                color: palette.text
+                                anchors.horizontalCenter: parent.right
+                            }
+                        }
+                    }
+                }
+
+                RowLayout {
+                    width: speedSlider.availableWidth
+
+                    Label {
+                        text: "Mute"
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: "Maximum"
+                    }
+                }
+            }
+
+            Item {
+                Layout.fillHeight: true
             }
         }
     }
@@ -349,44 +478,6 @@ ApplicationWindow {
                         Layout.fillWidth: true
                     }
 
-                    Label {
-                        text: "Speech speed"
-                        Layout.fillWidth: true
-                    }
-
-                    Slider {
-                        id: speechSpeedSlider
-
-                        Layout.fillWidth: true
-                        from: 0.5
-                        to: 2.0
-                        stepSize: 0.05
-                        value: 1.0 / speechController.lengthScale
-
-                        onMoved: speechController.lengthScale = 1.0 / value
-                    }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-
-                        Label {
-                            text: "Slower"
-                        }
-
-                        Item {
-                            Layout.fillWidth: true
-                        }
-
-                        Label {
-                            text: "Faster"
-                        }
-                    }
-
-                    Label {
-                        text: "Normal speed: 1.0"
-                        color: palette.placeholderText
-                        Layout.fillWidth: true
-                    }
                     Button {
                         text: "Close"
                         Layout.alignment: Qt.AlignRight
