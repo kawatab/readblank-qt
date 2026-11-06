@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Yasuhiro Yamakawa <kawatab@gmail.com>
 
+import QtCore
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -8,8 +9,55 @@ import QtQuick.Layouts
 ApplicationWindow {
     visible: true
     width: 800
-    height: 600
+    height: 800
     title: "ReadBlankQt"
+
+    readonly property var fontSizes: [10, 12, 14, 16, 18]
+    readonly property var fontSizeLabels: [qsTr("X-Small"), qsTr("Small"), qsTr("Medium"), qsTr("Larger"), qsTr("X-Large")]
+
+    Settings {
+        id: appSettings
+        property int fontSizeIndex: 2
+    }
+
+    property int fontSizeIndex: appSettings.fontSizeIndex
+    property int readingFontSize: fontSizes[fontSizeIndex]
+
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    readonly property var speechSpeedLabels: [qsTr("Slowest"), qsTr("Slow"), qsTr("Medium"), qsTr("Fast"), qsTr("Fastest")]
+
+    function speechSpeedLabel(lengthScale) {
+        return speechSpeedLabels[speechSpeedIndex(lengthScale)]
+    }
+
+    function speechSpeedScale(lengthIndex) {
+        let index = clamp(lengthIndex, 0, 4);
+        return Math.pow(2.0, 1.0 - index / 2.0);
+    }
+
+    function speechSpeedIndex(lengthScale) {
+        let scale = clamp(lengthScale, 0.5, 2.0);
+        return 2 - Math.round(Math.log2(scale) * 2);
+    }
+
+    readonly property var speechVolumeLabels: [qsTr("Mute"), qsTr("Low"), qsTr("Medium"), qsTr("High"), qsTr("Max")]
+
+    function speechVolumeLabel(volumeScale) {
+        return speechVolumeLabels[speechVolumeIndex(volumeScale)]
+    }
+
+    function speechVolumeScale(volumeIndex) {
+        let index = clamp(volumeIndex, 0, 4);
+        return index / 4.0;
+    }
+
+    function speechVolumeIndex(volumeScale) {
+        let scale = clamp(volumeScale, 0.0, 1.0);
+        return Math.round(scale * 4);
+    }
 
     Connections {
         target: contentController
@@ -107,6 +155,74 @@ ApplicationWindow {
             anchors.margins: 12
             spacing: 8
 
+            Column {
+                spacing: 4
+
+                Label {
+                    text: qsTr("Font size: %1").arg(fontSizeLabels[fontSizeIndex])
+                }
+
+                Slider {
+                    id: fontSizeSlider
+
+                    Layout.fillWidth: true
+
+                    from: 0
+                    to: 4
+                    stepSize: 1
+                    snapMode: Slider.SnapAlways
+
+                    value: fontSizeIndex
+                    onMoved: {
+                        fontSizeIndex = Math.round(value);
+                        appSettings.fontSizeIndex = fontSizeIndex;
+                    }
+                }
+
+                Row {
+                    width: fontSizeSlider.availableWidth - fontSizeSlider.handle.width
+                    anchors.horizontalCenter: fontSizeSlider.horizontalCenter
+
+                    Rectangle {
+                        width: 1
+                        height: 5
+                        color: palette.text
+                    }
+
+                    Repeater {
+                        model: 4
+
+                        Item {
+                            width: parent.width / 4
+                            height: 5
+
+                            Rectangle {
+                                width: 1
+                                height: 5
+                                color: palette.text
+                                anchors.horizontalCenter: parent.right
+                            }
+                        }
+                    }
+                }
+
+                RowLayout {
+                    width: fontSizeSlider.availableWidth
+
+                    Label {
+                        text: "Smaller"
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: "Larger"
+                    }
+                }
+            }
+
             Label {
                 text: "Speech"
                 font.bold: true
@@ -117,21 +233,21 @@ ApplicationWindow {
                 spacing: 4
 
                 Label {
-                    text: "Speed"
+                    text: qsTr("Speed: %1").arg(speechSpeedLabel(speechController.lengthScale))
                     Layout.fillWidth: true
                 }
 
                 Slider {
                     id: speedSlider
                     Layout.fillWidth: true
-                    from: 0.4
-                    to: 2.0
-                    stepSize: 0.4
+                    from: 0
+                    to: 4
+                    stepSize: 1
                     snapMode: Slider.SnapAlways
 
-                    value: 1.0 / speechController.lengthScale
+                    value: speechSpeedIndex(speechController.lengthScale)
 
-                    onMoved: speechController.lengthScale = 1.0 / value
+                    onMoved: speechController.lengthScale = speechSpeedScale(value)
                 }
 
                 Row {
@@ -182,21 +298,21 @@ ApplicationWindow {
                 spacing: 4
 
                 Label {
-                    text: "Volume"
+                    text: qsTr("Volume: %1").arg(speechVolumeLabel(speechController.volume))
                     Layout.fillWidth: true
                 }
 
                 Slider {
                     id: volumeSlider
                     Layout.fillWidth: true
-                    from: 0.0
-                    to: 1.0
-                    stepSize: 0.25
+                    from: 0
+                    to: 4
+                    stepSize: 1
                     snapMode: Slider.SnapAlways
 
-                    value: speechController.volume
+                    value: speechVolumeIndex(speechController.volume)
 
-                    onMoved: speechController.volume = value
+                    onMoved: speechController.volume = speechVolumeScale(value)
                 }
 
                 Row {
@@ -238,7 +354,7 @@ ApplicationWindow {
                     }
 
                     Label {
-                        text: "Maximum"
+                        text: "Max"
                     }
                 }
             }
@@ -411,6 +527,7 @@ ApplicationWindow {
                 selectByMouse: false
                 wrapMode: TextArea.Wrap
                 textFormat: TextEdit.RichText
+                font.pointSize: readingFontSize
 
                 text: contentController.currentParagraphHtml
 
