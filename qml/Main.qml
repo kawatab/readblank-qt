@@ -13,7 +13,7 @@ ApplicationWindow {
     title: "ReadBlankQt"
 
     readonly property var fontSizes: [10, 12, 14, 16, 18]
-    readonly property var fontSizeLabels: [qsTr("X-Small"), qsTr("Small"), qsTr("Medium"), qsTr("Larger"), qsTr("X-Large")]
+    readonly property var fontSizeLabels: [qsTr("X-Small"), qsTr("Small"), qsTr("Medium"), qsTr("Large"), qsTr("X-Large")]
 
     Settings {
         id: appSettings
@@ -30,7 +30,7 @@ ApplicationWindow {
     readonly property var speechSpeedLabels: [qsTr("Slowest"), qsTr("Slow"), qsTr("Medium"), qsTr("Fast"), qsTr("Fastest")]
 
     function speechSpeedLabel(lengthScale) {
-        return speechSpeedLabels[speechSpeedIndex(lengthScale)]
+        return speechSpeedLabels[speechSpeedIndex(lengthScale)];
     }
 
     function speechSpeedScale(lengthIndex) {
@@ -46,7 +46,7 @@ ApplicationWindow {
     readonly property var speechVolumeLabels: [qsTr("Mute"), qsTr("Low"), qsTr("Medium"), qsTr("High"), qsTr("Max")]
 
     function speechVolumeLabel(volumeScale) {
-        return speechVolumeLabels[speechVolumeIndex(volumeScale)]
+        return speechVolumeLabels[speechVolumeIndex(volumeScale)];
     }
 
     function speechVolumeScale(volumeIndex) {
@@ -157,6 +157,49 @@ ApplicationWindow {
 
             Column {
                 spacing: 4
+                Label {
+                    text: qsTr("Application language")
+                }
+
+                ComboBox {
+                    Layout.fillWidth: true
+
+                    model: [
+                        {
+                            name: qsTr("System default"),
+                            locale: ""
+                        },
+                        {
+                            name: "English",
+                            locale: "en"
+                        },
+                        {
+                            name: "Magyar",
+                            locale: "hu"
+                        },
+                        {
+                            name: "日本語",
+                            locale: "ja"
+                        },
+                        {
+                            name: "Français",
+                            locale: "fr"
+                        }
+                    ]
+
+                    textRole: "name"
+                    valueRole: "locale"
+
+                    currentIndex: {
+			const language = languageController.language
+			const index = model.findIndex(item => item.locale === language)
+                        return index >= 0 ? index : 0;
+                    }
+
+                    onActivated: {
+                        languageController.language = currentValue;
+                    }
+                }
 
                 Label {
                     text: qsTr("Font size: %1").arg(fontSizeLabels[fontSizeIndex])
@@ -210,7 +253,7 @@ ApplicationWindow {
                     width: fontSizeSlider.availableWidth
 
                     Label {
-                        text: "Smaller"
+                        text: qsTr("Smaller")
                     }
 
                     Item {
@@ -218,13 +261,13 @@ ApplicationWindow {
                     }
 
                     Label {
-                        text: "Larger"
+                        text: qsTr("Larger")
                     }
                 }
             }
 
             Label {
-                text: "Speech"
+                text: qsTr("Speech")
                 font.bold: true
                 Layout.fillWidth: true
             }
@@ -281,7 +324,7 @@ ApplicationWindow {
                     width: speedSlider.availableWidth
 
                     Label {
-                        text: "Slower"
+                        text: qsTr("Slower")
                     }
 
                     Item {
@@ -289,7 +332,7 @@ ApplicationWindow {
                     }
 
                     Label {
-                        text: "Faster"
+                        text: qsTr("Faster")
                     }
                 }
             }
@@ -346,7 +389,7 @@ ApplicationWindow {
                     width: speedSlider.availableWidth
 
                     Label {
-                        text: "Mute"
+                        text: qsTr("Mute")
                     }
 
                     Item {
@@ -354,7 +397,7 @@ ApplicationWindow {
                     }
 
                     Label {
-                        text: "Max"
+                        text: qsTr("Max")
                     }
                 }
             }
@@ -364,31 +407,31 @@ ApplicationWindow {
                 spacing: 8
 
                 Label {
-                    text: "Speech synthesis"
+                    text: qsTr("Speech synthesis")
                     font.bold: true
                     font.pixelSize: 16
                 }
 
                 Label {
-                    text: "Engine: Piper"
+                    text: qsTr("Engine: %1").arg("Piper")
                     wrapMode: Text.Wrap
                     Layout.fillWidth: true
                 }
 
                 Label {
-                    text: "Voice: " + speechController.voiceForLanguage(contentController.language)
+                    text: qsTr("Voice: %1").arg(speechController.voiceForLanguage(contentController.language))
                     wrapMode: Text.Wrap
                     Layout.fillWidth: true
                 }
 
                 Label {
-                    text: "Engine license: GPL-3.0-or-later"
+                    text: qsTr("Engine license: %1").arg("GPL-3.0-or-later")
                     wrapMode: Text.Wrap
                     Layout.fillWidth: true
                 }
 
                 Label {
-                    text: "Voice models have their own licenses."
+                    text: qsTr("Voice models have their own licenses.")
                     wrapMode: Text.Wrap
                     Layout.fillWidth: true
                 }
@@ -420,7 +463,7 @@ ApplicationWindow {
 
             Button {
                 Layout.alignment: Qt.AlignLeft
-                text: "Add from clipboard"
+                text: qsTr("Add from clipboard")
                 icon.name: "edit-paste"
 
                 onClicked: {
@@ -554,7 +597,7 @@ ApplicationWindow {
             Button {
                 icon.name: "go-previous"
                 enabled: contentController.canSelectPreviousWord
-                ToolTip.text: "Previous selectable word"
+                ToolTip.text: qsTr("Previous selectable word")
 
                 onClicked: contentController.previousWord()
 
@@ -572,7 +615,7 @@ ApplicationWindow {
             Button {
                 icon.name: "go-next"
                 enabled: contentController.canSelectNextWord
-                ToolTip.text: "Next selectable word"
+                ToolTip.text: qsTr("Next selectable word")
 
                 onClicked: contentController.nextWord()
 
@@ -710,7 +753,7 @@ ApplicationWindow {
         }
 
         Label {
-            text: contentController.loading ? "Loading..." : contentController.errorString
+            text: contentController.loading ? qsTr("Loading...") : contentController.errorString
         }
     }
 }

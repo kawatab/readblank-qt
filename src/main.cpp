@@ -2,10 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Yasuhiro Yamakawa <kawatab@gmail.com>
 
 #include <QGuiApplication>
+#include <QLocale>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QTranslator>
 
 #include "controller/ContentController.h"
+#include "controller/LanguageController.h"
 #include "controller/SpeechController.h"
 #include "model/FavoriteListModel.h"
 
@@ -15,6 +18,12 @@ int main(int argc, char *argv[])
 
     QCoreApplication::setOrganizationName("WITHLET11");
     QCoreApplication::setApplicationName("ReadBlank Qt");
+
+    QTranslator translator;
+
+    if (translator.load(QLocale(), "readblank-qt", "_", ":/i18n")) {
+        app.installTranslator(&translator);
+    }
 
     FavoriteListModel favoriteListModel;
     ContentController contentController;
@@ -28,11 +37,12 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
 
+    LanguageController *languageController = new LanguageController(&engine);
+
     engine.rootContext()->setContextProperty("favoriteListModel", &favoriteListModel);
-
     engine.rootContext()->setContextProperty("contentController", &contentController);
-
     engine.rootContext()->setContextProperty("speechController", &speechController);
+    engine.rootContext()->setContextProperty("languageController", languageController);
 
     engine.loadFromModule("ReadBlankQt", "Main");
 
