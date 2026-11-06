@@ -31,6 +31,7 @@ class ContentController : public QObject
     Q_PROPERTY(bool canGoPrevious READ canGoPrevious NOTIFY paragraphStateChanged)
     Q_PROPERTY(bool canGoNext READ canGoNext NOTIFY paragraphStateChanged)
 
+    Q_PROPERTY(int wordMaskMode READ wordMaskMode WRITE setWordMaskMode NOTIFY wordMaskModeChanged)
     Q_PROPERTY(QString currentParagraphHtml READ currentParagraphHtml NOTIFY paragraphStateChanged)
     Q_PROPERTY(bool canSelectPreviousWord READ canSelectPreviousWord NOTIFY paragraphStateChanged)
     Q_PROPERTY(bool canSelectNextWord READ canSelectNextWord NOTIFY paragraphStateChanged)
@@ -40,6 +41,11 @@ class ContentController : public QObject
 public:
     explicit ContentController(QObject *parent = nullptr);
 
+    enum WordMaskMode { WholeWord = 0, FirstThreeLetters = 1, LastThreeLetters = 2 };
+    Q_ENUM(WordMaskMode)
+
+    int wordMaskMode() const;
+    void setWordMaskMode(int mode);
     QString title() const;
     QString content() const;
     QString language() const;
@@ -68,7 +74,6 @@ public:
     bool canSelectNextWord() const;
     QVariantList selectableWords() const;
     int selectedWordIndex() const;
-
     Q_INVOKABLE void selectWord(int wordIndex);
     Q_INVOKABLE void previousWord();
     Q_INVOKABLE void nextWord();
@@ -82,13 +87,28 @@ signals:
     void languageChanged();
     void loadingChanged();
     void currentModelChanged();
+    void wordMaskModeChanged();
     void wordRevealed(const QString &word, const QString &language);
     void errorChanged();
 
 private:
+    struct WordRange
+    {
+        int start;
+        int length;
+        int index;
+    };
+
+    struct WordDisplay
+    {
+        QString hidden;
+        QString visible;
+    };
+
     void cancelCurrentRequest();
     void updateWordSelection();
     void updateParagraphHtml();
+    WordDisplay wordDisplay(const QString &word) const;
 
     QString m_content;
     int m_paragraphIndex = 0;
@@ -96,12 +116,7 @@ private:
     int m_selectedWordIndex = -1;
     QString m_currentParagraphHtml;
 
-    struct WordRange
-    {
-        int start;
-        int length;
-        int index;
-    };
+    int m_wordMaskMode = WholeWord;
 
     QVector<WordRange> m_words;
     QSet<int> m_revealedWordIndexes;

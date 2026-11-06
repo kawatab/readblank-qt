@@ -112,6 +112,24 @@ QByteArray getEncoding(const QString &contentType)
 
 ContentController::ContentController(QObject *parent) : QObject(parent) { }
 
+int ContentController::wordMaskMode() const
+{
+    return m_wordMaskMode;
+}
+
+void ContentController::setWordMaskMode(int mode)
+{
+    if (m_wordMaskMode == mode)
+        return;
+
+    m_wordMaskMode = mode;
+
+    updateWordSelection();
+
+    emit wordMaskModeChanged();
+    emit paragraphStateChanged();
+}
+
 QString ContentController::title() const
 {
     return m_currentModel ? m_currentModel->title() : QString();
@@ -353,8 +371,7 @@ void ContentController::lastParagraph()
 
 void ContentController::setCurrentParagraph(int index)
 {
-    if (index < 0 || index >= paragraphCount()
-        || index == m_paragraphIndex)
+    if (index < 0 || index >= paragraphCount() || index == m_paragraphIndex)
         return;
 
     m_paragraphIndex = index;
@@ -433,42 +450,104 @@ void ContentController::updateWordSelection()
 
     updateParagraphHtml();
 }
-
 void ContentController::updateParagraphHtml()
 {
+    const QString paragraph = currentParagraph();
+
     QString html;
     int position = 0;
 
     for (int i = 0; i < m_words.size(); ++i) {
         const auto &word = m_words.at(i);
 
-        html += currentParagraph().mid(position, word.start - position).toHtmlEscaped();
+        // Append text preceding this word.
+        html += paragraph.mid(position, word.start - position).toHtmlEscaped();
 
-        const QString text = currentParagraph().mid(word.start, word.length).toHtmlEscaped();
+        const QString text = paragraph.mid(word.start, word.length);
 
-        if (m_selectableWordIndexes.contains(i)) {
-            const QString background = (i == m_selectedWordIndex) ? "#f0a040" : "#d0d0d0";
+        if (!m_selectableWordIndexes.contains(i)) {
+            html += text.toHtmlEscaped();
+        } else {
+            const bool selected = i == m_selectedWordIndex;
+            const bool revealed = m_revealedWordIndexes.contains(i);
 
-            if (m_revealedWordIndexes.contains(i)) {
+            const QString background = selected ? "#f0a040" : "#d0d0d0";
 
+            if (revealed) {
                 html += QStringLiteral(
                                 "<span style=\"background-color:%1;color:#202020;\">%2</span>")
-                                .arg(background, text);
+                                .arg(background, text.toHtmlEscaped());
             } else {
-                html += QStringLiteral("<span "
-                                       "style=\"background-color:%1;color:transparent;\">%2</span>")
-                                .arg(background, text);
+                const WordDisplay display = wordDisplay(text);
+
+                if (m_wordMaskMode == LastThreeLetters) {
+                    // Visible prefix first, hidden suffix second.
+                    html += display.visible.toHtmlEscaped();
+                    html += QStringLiteral("<span style=\"background-color:%1;\">"
+                                           "<span style=\"color:transparent;\">%2</span>"
+                                           "</span>")
+                                    .arg(background, display.hidden.toHtmlEscaped());
+                } else {
+                    // Hidden prefix (or whole word) first, visible remainder second.
+                    html += QStringLiteral("<span style=\"background-color:%1;\">"
+                                           "<span style=\"color:transparent;\">%2</span>"
+                                           "</span>")
+                                    .arg(background, display.hidden.toHtmlEscaped());
+                    html += display.visible.toHtmlEscaped();
+                }
             }
-        } else {
-            html += text;
         }
 
+        // Advance past the current word.
         position = word.start + word.length;
     }
 
-    html += currentParagraph().mid(position).toHtmlEscaped();
+    // Append any remaining text after the last word.
+    html += paragraph.mid(position).toHtmlEscaped();
 
     m_currentParagraphHtml = html;
+}
+
+ContentController::WordDisplay ContentController::wordDisplay(const QString &word) const
+{
+    if (m_wordMaskMode == WholeWord)
+        return { word, QString() };
+
+    int splitPosition = 0;
+    int letterCount = 0;
+
+    if (m_wordMaskMode == FirstThreeLetters) {
+        for (int i = 0; i < word.size(); ++i) {
+            if (word.at(i).isLetter())
+                ++letterCount;
+
+            if (letterCount == 3) {
+                splitPosition = i + 1;
+                break;
+            }
+        }
+
+        if (letterCount < 3)
+            splitPosition = word.size();
+
+        return { word.left(splitPosition), word.mid(splitPosition) };
+    }
+
+    // Last three letters.
+    for (int i = word.size() - 1; i >= 0; --i) {
+        if (word.at(i).isLetter())
+            ++letterCount;
+
+        if (letterCount == 3) {
+            splitPosition = i;
+            break;
+        }
+    }
+
+    if (letterCount < 3)
+        splitPosition = 0;
+
+    return { word.mid(splitPosition), word.left(splitPosition) };
 }
 
 QString ContentController::currentParagraphHtml() const
@@ -543,15 +622,21 @@ QVariantList ContentController::selectableWords() const
         const QString textA = currentParagraph().mid(wordA.start, wordA.length);
         const QString textB = currentParagraph().mid(wordB.start, wordB.length);
 
-        return QString::compare(textA, textB, Qt::CaseInsensitive) < 0;
+        return QString::compare(wordDisplay(textA).hidden, wordDisplay(textB).hidden,
+                                Qt::CaseInsensitive)
+                < 0;
     });
 
     for (int index : indexes) {
         const auto &word = m_words.at(index);
 
+        const QString text = currentParagraph().mid(word.start, word.length);
+
+        const WordDisplay display = wordDisplay(text);
+
         QVariantMap item;
         item.insert("index", index);
-        item.insert("text", currentParagraph().mid(word.start, word.length).toLower());
+        item.insert("text", display.hidden.toLower());
         item.insert("revealed", m_usedButtonIndexes.contains(index));
 
         result.append(item);
@@ -575,7 +660,6 @@ void ContentController::revealWord(int wordIndex)
 
     if (m_selectedWordIndex < 0)
         return;
-
     const auto &buttonWord = m_words.at(wordIndex);
     const auto &selectedWord = m_words.at(m_selectedWordIndex);
 
@@ -583,7 +667,10 @@ void ContentController::revealWord(int wordIndex)
 
     const QString selectedText = currentParagraph().mid(selectedWord.start, selectedWord.length);
 
-    if (QString::compare(buttonText, selectedText, Qt::CaseInsensitive) != 0)
+    const QString buttonFragment = wordDisplay(buttonText).hidden;
+    const QString selectedFragment = wordDisplay(selectedText).hidden;
+
+    if (QString::compare(buttonFragment, selectedFragment, Qt::CaseInsensitive) != 0)
         return;
 
     m_usedButtonIndexes.insert(wordIndex);

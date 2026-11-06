@@ -191,13 +191,29 @@ ApplicationWindow {
                     valueRole: "locale"
 
                     currentIndex: {
-			const language = languageController.language
-			const index = model.findIndex(item => item.locale === language)
+                        const language = languageController.language;
+                        const index = model.findIndex(item => item.locale === language);
                         return index >= 0 ? index : 0;
                     }
 
                     onActivated: {
                         languageController.language = currentValue;
+                    }
+                }
+
+                Label {
+                    text: qsTr("Word masking")
+                }
+
+                ComboBox {
+                    Layout.fillWidth: true
+
+                    model: [qsTr("Whole word"), qsTr("First 3 letters"), qsTr("Last 3 letters")]
+
+                    currentIndex: contentController.wordMaskMode
+
+                    onActivated: index => {
+                        contentController.wordMaskMode = index;
                     }
                 }
 
